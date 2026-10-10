@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Photoelectric Effect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root{--ink:#020307;--text:#e8eef8;--muted:#8b96aa;--e:#6ee7ff;--line:rgba(255,255,255,.09);--glass:rgba(12,16,26,.72)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--ink);color:var(--text);font:400 15px/1.55 'IBM Plex Sans',system-ui,sans-serif;overflow:hidden}
+#stream{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+#intro{position:fixed;inset:0;z-index:2;overflow:hidden}
+#game{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+#game:active{cursor:grabbing}
+.title{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:90vw;text-align:center;pointer-events:none}
+.vapour{position:relative;isolation:isolate;display:inline-block;margin:0;font:400 clamp(2.6rem,11vw,9.5rem)/.92 'Instrument Serif',Georgia,serif;letter-spacing:-.02em;color:#f3f8ff;text-shadow:0 0 22px rgba(110,231,255,.5);animation:vap 7s ease-in-out infinite alternate}
+.vapour::before{content:attr(data-t);position:absolute;inset:0;z-index:-1;color:rgba(110,231,255,.6);filter:blur(18px);transform:translateY(-.1em)}
+@keyframes vap{to{text-shadow:0 -10px 48px rgba(255,181,71,.45),0 0 60px rgba(110,231,255,.35)}}
+#target{position:absolute;right:11vw;top:24vh;margin:0;width:clamp(72px,9vw,120px);pointer-events:none}
+#plate{height:46vh;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.22);box-shadow:0 0 40px rgba(110,231,255,.14);transition:box-shadow .4s}
+#plate canvas{display:block;width:100%;height:100%}
+#target.hit #plate{box-shadow:0 0 90px rgba(110,231,255,.8)}
+#target figcaption{margin-top:12px;text-align:center;font:500 12px 'IBM Plex Mono',monospace;color:var(--muted)}
+#hint{position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);width:max-content;max-width:90vw;margin:0;padding:10px 18px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px);pointer-events:none;font-size:14px;text-align:center}
+#skip{position:absolute;top:24px;right:24px;font:inherit;color:var(--text);background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:9px 16px;cursor:pointer;backdrop-filter:blur(10px)}
+#skip:hover{border-color:rgba(255,255,255,.28)}
+:focus-visible{outline:2px solid var(--e);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.vapour{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="stream"></canvas>
+
+<section id="intro">
+  <canvas id="game" aria-label="Drag the electron back and release to fire it at the metal surface"></canvas>
+  <div class="title">
+    <h1 class="vapour" data-t="Photoelectric Effect">Photoelectric Effect</h1>
+  </div>
+  <figure id="target">
+    <div id="plate"><canvas id="ring"></canvas></div>
+    <figcaption>Metal surface</figcaption>
+  </figure>
+  <p id="hint">This is an electron (charge −1.6 × 10⁻¹⁹ C). Drag it back and release to fire it.</p>
+  <button id="skip" type="button">Skip to simulation</button>
+</section>
+
+<script>
+const $=s=>document.querySelector(s),D=Math.min(devicePixelRatio||1,2),TAU=Math.PI*2;
+const G=900,K=8,MAXPULL=110;
+const HINT0='This is an electron (charge −1.6 × 10⁻¹⁹ C). Drag it back and release to fire it.';
+
+/* WebGL layers. Shaders adapted from the uploaded WebGL stream and ring shaders. */
+function webgl(canvas,frag){
+  const g=canvas.getContext('webgl');if(!g)return null;
+  const mk=(t,s)=>{const o=g.createShader(t);g.shaderSource(o,s);g.compileShader(o);return o};
+  const p=g.createProgram();
+  g.attachShader(p,mk(g.VERTEX_SHADER,'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+  g.attachShader(p,mk(g.FRAGMENT_SHADER,frag));
+  g.linkProgram(p);g.useProgram(p);
+  g.bindBuffer(g.ARRAY_BUFFER,g.createBuffer());
+  g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),g.STATIC_DRAW);
+  const a=g.getAttribLocation(p,'a');g.enableVertexAttribArray(a);g.vertexAttribPointer(a,2,g.FLOAT,false,0,0);
+  const ru=g.getUniformLocation(p,'resolution'),tu=g.getUniformLocation(p,'time');
+  return{canvas,draw(t){g.viewport(0,0,canvas.width,canvas.height);g.uniform2f(ru,canvas.width,canvas.height);g.uniform1f(tu,t);g.drawArrays(g.TRIANGLE_STRIP,0,4)}};
+}
+const STREAM=`precision highp float;uniform vec2 resolution;uniform float time;
+void main(){vec2 p=(gl_FragCoord.xy*2.0-resolution)/min(resolution.x,resolution.y);
+float d=length(p)*0.05;
+float r=0.07/abs(p.y+sin((p.x*(1.0+d)+time))*0.5);
+float g=0.07/abs(p.y+sin((p.x+time))*0.5);
+float b=0.07/abs(p.y+sin((p.x*(1.0-d)+time))*0.5);
+gl_FragColor=vec4(r,g,b,1.0);}`;
+const RINGS=`precision highp float;uniform vec2 resolution;uniform float time;
+void main(){vec2 uv=(gl_FragCoord.xy*2.0-resolution)/min(resolution.x,resolution.y);
+float t=time*0.05;vec3 c=vec3(0.0);
+for(int j=0;j<3;j++){for(int i=0;i<5;i++){
+c[j]+=0.002*float(i*i)/abs(fract(t-0.01*float(j)+float(i)*0.01)*5.0-length(uv)+mod(uv.x+uv.y,0.2));}}
+gl_FragColor=vec4(c,1.0);}`;
+const stream=webgl($('#stream'),STREAM),ring=webgl($('#ring'),RINGS);
+
+/* Electron slingshot */
+const game=$('#game'),gc=game.getContext('2d'),target=$('#target'),hint=$('#hint'),plate=$('#plate');
+let W=0,H=0,ax=0,ay=0,e={x:0,y:0,vx:0,vy:0,t:0,st:'rest'},bits=[];
+const t0=performance.now();let last=t0;
+
+function trail(){
+  let px=e.x,py=e.y,vx=(ax-px)*K,vy=(ay-py)*K;
+  for(let i=0;i<60;i++){
+    vy+=G*.02;px+=vx*.02;py+=vy*.02;
+    if(i%4===3){gc.globalAlpha=1-i/70;gc.fillStyle='#ffb547';gc.beginPath();gc.arc(px,py,2.4,0,TAU);gc.fill()}
+  }
+  gc.globalAlpha=1;
+}
+game.addEventListener('pointerdown',ev=>{
+  if(e.st!=='rest')return;
+  if(Math.hypot(ev.offsetX-e.x,ev.offsetY-e.y)<34){e.st='drag';game.setPointerCapture(ev.pointerId)}
+});
+game.addEventListener('pointermove',ev=>{
+  if(e.st!=='drag')return;
+  const dx=ev.offsetX-ax,dy=ev.offsetY-ay,d=Math.hypot(dx,dy)||1,k=Math.min(d,MAXPULL)/d;
+  e.x=ax+dx*k;e.y=ay+dy*k;
+});
+game.addEventListener('pointerup',()=>{
+  if(e.st!=='drag')return;
+  e.vx=(ax-e.x)*K;e.vy=(ay-e.y)*K;e.t=0;e.st='fly';
+  hint.textContent='Fired. Watch where it lands.';
+});
+
+function go(){
+  gsap.to('#intro',{opacity:0,duration:.7,onComplete:()=>{location.href='photoelectric_effect.html'}});
+}
+function impact(r){
+  e.st='hit';target.classList.add('hit');
+  hint.textContent='Photoelectrons released! Opening the simulation…';
+  const y0=Math.min(Math.max(e.y,r.top),r.bottom);
+  for(let i=0;i<28;i++){
+    const a=(Math.random()-.5)*2.6,s=140+Math.random()*340;
+    bits.push({x:r.left,y:y0+(Math.random()-.5)*40,vx:-Math.cos(a)*s,vy:Math.sin(a)*s,t:0,life:1.6+Math.random()*.6});
+  }
+  gsap.delayedCall(2.4,go);
+}
+function step(dt){
+  if(e.st==='fly'){
+    e.t+=dt;e.vy+=G*dt;e.x+=e.vx*dt;e.y+=e.vy*dt;
+    const r=plate.getBoundingClientRect();
+    if(e.x>=r.left-12&&e.y>=r.top&&e.y<=r.bottom){impact(r);return}
+    if(e.x>W+40||e.y>H+40||e.t>6){e.st='rest';e.x=ax;e.y=ay;hint.textContent='Missed. Pull back and try again.'}
+  }
+  bits.forEach(p=>{p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.98;p.vy*=.98});
+  bits=bits.filter(p=>p.t<p.life);
+}
+function render(){
+  const c=gc;c.setTransform(D,0,0,D,0,0);c.clearRect(0,0,W,H);
+  c.lineCap='round';c.lineWidth=4;c.strokeStyle='rgba(255,255,255,.3)';
+  c.beginPath();c.moveTo(ax,H);c.lineTo(ax,ay);c.moveTo(ax-16,ay-44);c.lineTo(ax,ay);c.lineTo(ax+16,ay-44);c.stroke();
+  if(e.st==='drag'){
+    c.strokeStyle='rgba(110,231,255,.6)';c.beginPath();
+    c.moveTo(ax-16,ay-44);c.lineTo(e.x,e.y);c.lineTo(ax+16,ay-44);c.stroke();
+    trail();
+  }
+  if(e.st!=='hit'){
+    const r=26*(1+.15*Math.sin(performance.now()/180)),g=c.createRadialGradient(e.x,e.y,0,e.x,e.y,r);
+    g.addColorStop(0,'rgba(110,231,255,.9)');g.addColorStop(1,'rgba(110,231,255,0)');
+    c.fillStyle=g;c.beginPath();c.arc(e.x,e.y,r,0,TAU);c.fill();
+    c.fillStyle='#eafcff';c.beginPath();c.arc(e.x,e.y,9,0,TAU);c.fill();
+    c.fillStyle='#e8eef8';c.textAlign='center';c.font='500 13px "IBM Plex Mono",monospace';
+    c.fillText('e⁻',e.x,e.y-24);
+  }
+  c.fillStyle='#6ee7ff';
+  for(const p of bits){c.globalAlpha=Math.max(0,1-p.t/p.life);c.beginPath();c.arc(p.x,p.y,3.2,0,TAU);c.fill()}
+  c.globalAlpha=1;
+}
+function size(){
+  W=innerWidth;H=innerHeight;game.width=W*D;game.height=H*D;
+  ax=W*.17;ay=H*.7;
+  if(e.st==='rest'){e.x=ax;e.y=ay}
+  [stream,ring].forEach(l=>{if(l){l.canvas.width=l.canvas.clientWidth*D;l.canvas.height=l.canvas.clientHeight*D}});
+}
+function loop(now){
+  const dt=Math.min((now-last)/1000,.033);last=now;
+  if(stream)stream.draw((now-t0)*.0006);
+  if(ring)ring.draw((now-t0)*.003);
+  step(dt);render();
+  requestAnimationFrame(loop);
+}
+
+$('#skip').addEventListener('click',go);
+addEventListener('resize',size);
+addEventListener('pageshow',ev=>{if(ev.persisted)gsap.set('#intro',{opacity:1})});
+gsap.from('.title>*',{y:24,opacity:0,duration:1.4,ease:'power3.out'});
+size();hint.textContent=HINT0;requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Photoelectric Effect Simulation</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+            color: #222;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: auto;
+            padding-bottom: 30px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        select,
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .value {
+            font-weight: bold;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #667;
+        }
+
+        /* ---------- View toggle ---------- */
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .view-button {
+            background: #1f4e8c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 11px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .view-button:hover {
+            background: #173b6b;
+        }
+
+        .view-button:focus-visible {
+            outline: 3px solid #7fb2ff;
+            outline-offset: 2px;
+        }
+
+        .view-caption {
+            font-size: 14px;
+            color: #556;
+        }
+
+        /* ---------- Simulation canvas ---------- */
+
+        .sim-wrap {
+            max-width: 800px;
+            margin: 12px auto 0;
+            overflow-x: auto;
+            border-radius: 12px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            min-width: 720px;
+            background: #07111f;
+            border-radius: 12px;
+        }
+
+        .results {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .result-box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .result-box h3 {
+            margin: 5px 0 10px;
+        }
+
+        .result-box p {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .status {
+            margin-top: 15px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 900px) {
+            .controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .results {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#03050a;--panel:rgba(14,18,28,.82);--line:rgba(255,255,255,.14);--text:#f4f7fb;--muted:#9aa6b8;--e:#6ee7ff}
+html,body{background:var(--ink)!important;color:var(--text);font-family:'IBM Plex Sans',Arial,sans-serif}
+#paths{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.6}
+#paths path{fill:none;stroke:rgba(110,231,255,.55);stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:.25 .75;animation:flow 10s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-1}}
+.container{position:relative;z-index:1;padding-top:28px}
+h1.vapour{font:400 clamp(2.6rem,6vw,4.4rem)/1 'Instrument Serif',Georgia,serif;letter-spacing:-.02em;color:#f3f8ff;text-align:center;margin:0 0 6px;position:relative;isolation:isolate;text-shadow:0 0 22px rgba(110,231,255,.5)}
+h1.vapour::before{content:attr(data-t);position:absolute;inset:0;z-index:-1;color:rgba(110,231,255,.6);filter:blur(16px);transform:translateY(-.1em)}
+.back{display:block;width:max-content;margin:12px auto 26px;color:var(--muted);text-decoration:none;font-size:14px}
+.back:hover{color:#fff}
+.controls,.result-box,.status,.card{background:var(--panel)!important;border:1px solid var(--line);box-shadow:0 12px 40px rgba(0,0,0,.5)!important;backdrop-filter:blur(14px)}
+.controls{border-radius:18px;color:var(--text)}
+label{color:var(--text)}
+.hint{color:var(--muted)}
+select{background:#080c14;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit}
+input[type="range"]{accent-color:var(--e)}
+.view-button{background:var(--e);color:#03050a;border-radius:999px;font-weight:600}
+.view-button:hover{background:#b9f3ff}
+.view-caption{color:var(--muted)}
+.sim-wrap{border:1px solid var(--line);background:#03050a}
+.sim-wrap canvas{background:transparent;border-radius:16px}
+.results{margin-top:18px}
+.result-box{border-radius:14px}
+.result-box h3{color:var(--muted);font:500 12px 'IBM Plex Sans',sans-serif;margin:4px 0 8px}
+.result-box p{font:500 18px 'IBM Plex Mono',monospace;color:#fff}
+.graphs{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:18px}
+.card{margin:0;border-radius:14px;padding:14px 16px}
+.card figcaption{color:var(--muted);font:500 13px 'IBM Plex Sans',sans-serif;margin-bottom:8px}
+.graphs canvas{min-width:0;width:100%;height:240px;background:transparent;border-radius:0}
+.status{color:var(--text);margin-top:18px}
+@media (max-width:900px){.graphs{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<svg id="paths" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"></svg>
+
+<div class="container">
+
+    <h1 class="vapour" data-t="Photoelectric Effect Simulation">Photoelectric Effect Simulation</h1>
+    <a class="back" href="index.html">← Back to launch</a>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+
+        <div class="control">
+            <label for="metal">Metal</label>
+
+            <select id="metal">
+                <option value="2.14">Cesium</option>
+                <option value="2.28">Sodium</option>
+                <option value="2.30">Potassium</option>
+                <option value="2.87">Calcium</option>
+                <option value="4.30">Zinc</option>
+            </select>
+        </div>
+
+
+        <div class="control">
+            <label for="frequency">
+                Frequency:
+                <span id="frequencyValue">5.0</span>
+                × 10¹⁴ Hz
+                (λ ≈ <span id="wavelengthValue">600</span> nm)
+            </label>
+
+            <input
+                type="range"
+                id="frequency"
+                min="3"
+                max="12"
+                step="0.1"
+                value="5"
+            >
+        </div>
+
+
+        <div class="control">
+            <label for="intensity">
+                Intensity:
+                <span id="intensityValue">50</span>%
+            </label>
+
+            <input
+                type="range"
+                id="intensity"
+                min="0"
+                max="100"
+                value="50"
+            >
+        </div>
+
+
+        <div class="control">
+            <label for="voltage">
+                Applied Voltage:
+                <span id="voltageValue">0.0</span> V
+            </label>
+
+            <input
+                type="range"
+                id="voltage"
+                min="-5"
+                max="5"
+                step="0.1"
+                value="0"
+            >
+
+            <span class="hint">
+                Negative = retarding (opposes the electrons)
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- VIEW TOGGLE -->
+    <div class="toolbar">
+        <button
+            type="button"
+            id="zoomButton"
+            class="view-button"
+            aria-pressed="false"
+        >
+            Show inside the tube
+        </button>
+
+        <span class="view-caption" id="viewCaption" aria-live="polite">
+            Experiment setup
+        </span>
+    </div>
+
+
+    <!-- SIMULATION -->
+    <div class="sim-wrap">
+        <canvas id="simulation"></canvas>
+    </div>
+
+
+    <!-- RESULTS -->
+    <div class="results">
+
+        <div class="result-box">
+            <h3>Work Function</h3>
+            <p id="workFunction">2.14 eV</p>
+        </div>
+
+        <div class="result-box">
+            <h3>Threshold Frequency</h3>
+            <p id="thresholdFrequency">5.17 × 10¹⁴ Hz</p>
+        </div>
+
+        <div class="result-box">
+            <h3>Maximum KE</h3>
+            <p id="kineticEnergy">0.00 eV</p>
+        </div>
+
+        <div class="result-box">
+            <h3>Stopping Potential</h3>
+            <p id="stoppingPotential">0.00 V</p>
+        </div>
+
+    </div>
+
+
+        <section class="graphs">
+        <figure class="card"><figcaption>Maximum kinetic energy vs frequency</figcaption><canvas id="graphK"></canvas></figure>
+        <figure class="card"><figcaption>Photocurrent vs collector voltage</figcaption><canvas id="graphI"></canvas></figure>
+    </section>
+
+<div class="status" id="status">
+        No photoelectrons are being emitted.
+    </div>
+
+</div>
+
+
+<script>
+
+    // ============================================================
+    // PHYSICAL CONSTANTS
+    // ============================================================
+
+    // Planck's constant in eV·s
+    const PLANCK_CONSTANT = 4.135667696e-15;
+
+    // Electron mass in kg
+    const ELECTRON_MASS = 9.1093837e-31;
+
+    // Electron volt to joules
+    const EV_TO_JOULE = 1.602176634e-19;
+
+    // Speed of light in nm·(10¹⁴ Hz): λ(nm) = 2998 / f(10¹⁴ Hz)
+    const LIGHT_SPEED_NM = 2998;
+
+    // Photocurrent at 100 % intensity (saturation), in microamps
+    const MAX_CURRENT = 20;
+
+    // Slowest emitted electron carries this fraction of the maximum KE
+    const MIN_ENERGY_FRACTION = 0.15;
+
+
+    // ============================================================
+    // GET HTML ELEMENTS
+    // ============================================================
+
+    const canvas = document.getElementById("simulation");
+    const ctx = canvas.getContext("2d");
+
+    const metal = document.getElementById("metal");
+    const frequency = document.getElementById("frequency");
+    const intensity = document.getElementById("intensity");
+    const voltage = document.getElementById("voltage");
+
+    const frequencyValue =
+        document.getElementById("frequencyValue");
+
+    const wavelengthValue =
+        document.getElementById("wavelengthValue");
+
+    const intensityValue =
+        document.getElementById("intensityValue");
+
+    const voltageValue =
+        document.getElementById("voltageValue");
+
+    const workFunction =
+        document.getElementById("workFunction");
+
+    const thresholdFrequency =
+        document.getElementById("thresholdFrequency");
+
+    const kineticEnergy =
+        document.getElementById("kineticEnergy");
+
+    const stoppingPotential =
+        document.getElementById("stoppingPotential");
+
+    const statusBox =
+        document.getElementById("status");
+
+    const zoomButton =
+        document.getElementById("zoomButton");
+
+    const viewCaption =
+        document.getElementById("viewCaption");
+
+
+    // ============================================================
+    // DRAWING SPACE
+    //
+    // Everything is drawn in a fixed "virtual" space of
+    // 1000 × 520 units and scaled to the real canvas size,
+    // so the layout looks the same on any screen.
+    // ============================================================
+
+    const VW = 1000;
+    const VH = 520;
+
+    let scale = 1;
+    let dpr = 1;
+
+    function resizeCanvas() {
+
+        dpr = window.devicePixelRatio || 1;
+
+        const cssWidth = canvas.clientWidth;
+
+        scale = cssWidth / VW;
+
+        const cssHeight = VH * scale;
+
+        canvas.style.height = cssHeight + "px";
+
+        canvas.width = Math.round(cssWidth * dpr);
+        canvas.height = Math.round(cssHeight * dpr);
+
+    }
+
+    resizeCanvas();
+
+    window.addEventListener("resize", resizeCanvas);
+
+
+    // ============================================================
+    // LAYOUT
+    // ============================================================
+
+    // --- Inside (enlarged) view -----------------------------------
+    const METAL_X = VW * 0.50;
+    const COLLECTOR_X = VW * 0.83;
+    const PLATE_WIDTH = 18;
+
+    // --- Experiment (apparatus) view ------------------------------
+    const TUBE = { left: 300, right: 820, top: 75, bottom: 235 };
+
+    const TUBE_CENTER_Y = 155;
+
+    const LENS_X = 140;          // front of the lamp
+    const BEAM_FLARE_X = 345;    // where the beam reaches full width
+
+    const EMITTER_X = 475;       // centre of emitter plate
+    const COLLECTOR_PLATE_X = 705;
+    const APP_PLATE_TOP = 100;
+    const APP_PLATE_BOTTOM = 210;
+    const APP_PLATE_WIDTH = 9;
+
+    // Circuit rectangle
+    const WIRE_LEFT = 335;
+    const WIRE_RIGHT = 845;
+    const WIRE_TOP = 282;
+    const WIRE_BOTTOM = 438;
+
+    const VOLTMETER = { x: (EMITTER_X + COLLECTOR_PLATE_X) / 2, y: WIRE_TOP };
+    const AMMETER = { x: COLLECTOR_PLATE_X, y: WIRE_BOTTOM };
+    const SUPPLY = { x: 480, y: WIRE_BOTTOM };
+
+    const METER_RADIUS = 34;
+
+    // Tint of the emitter plate for each metal (same order as the list)
+    const METAL_COLORS = [
+        "#e3c574",   // Cesium
+        "#d3d8e0",   // Sodium
+        "#cdd1d8",   // Potassium
+        "#c0c4c9",   // Calcium
+        "#a9b8c4"    // Zinc
+    ];
+
+    const WIRE_COLOR = "#d2874a";
+
+
+    // ============================================================
+    // STATE
+    // ============================================================
+
+    let photons = [];
+    let electrons = [];
+
+    let lastTime = performance.now();
+
+    // Controls how frequently photons are created
+    let photonTimer = 0;
+
+    // false = experiment setup, true = enlarged inside view
+    let showInside = false;
+
+    // 0 = fully apparatus view, 1 = fully inside view
+    let viewBlend = 0;
+
+    // Value shown by the ammeter (eases toward the real current)
+    let meterCurrent = 0;
+
+    // Position of the moving dots in the wires
+    let flowPosition = 0;
+
+    // Colour of the light for the current frequency
+    let lightRGB = [255, 200, 80];
+
+
+    // ============================================================
+    // SMALL HELPERS
+    // ============================================================
+
+    function clamp(value, low, high) {
+        return Math.min(high, Math.max(low, value));
+    }
+
+    function easeInOut(t) {
+        return t * t * (3 - 2 * t);
+    }
+
+    function css(color, alpha) {
+
+        if (alpha === undefined) {
+            return "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")";
+        }
+
+        return "rgba(" + color[0] + "," + color[1] + "," +
+               color[2] + "," + alpha + ")";
+    }
+
+    function mixWithWhite(color, amount) {
+
+        return color.map(function (c) {
+            return Math.round(c + (255 - c) * amount);
+        });
+    }
+
+    function formatSigned(value, digits) {
+
+        const text = Math.abs(value).toFixed(digits);
+
+        if (Number(text) === 0) {
+            return (0).toFixed(digits);
+        }
+
+        return (value > 0 ? "+" : "−") + text;
+    }
+
+    function roundedRectPath(x, y, w, h, r) {
+
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+    }
+
+    function drawText(text, x, y, size, color, align, font) {
+
+        ctx.fillStyle = color || "rgba(255,255,255,0.9)";
+        ctx.font = (size || 14) + "px " + (font || "Arial");
+        ctx.textAlign = align || "center";
+        ctx.fillText(text, x, y);
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+
+    // ============================================================
+    // COLOUR OF LIGHT
+    // ============================================================
+
+    function getLightColor() {
+
+        const f = Number(frequency.value);
+
+        // Wavelength in nm
+        const w = LIGHT_SPEED_NM / f;
+
+        // Ultraviolet (shown violet) and infrared (shown dark red)
+        if (w < 380) {
+            return [176, 128, 255];
+        }
+
+        if (w > 780) {
+            return [200, 70, 70];
+        }
+
+        let r = 0;
+        let g = 0;
+        let b = 0;
+
+        if (w < 440) {
+            r = (440 - w) / 60;
+            b = 1;
+        } else if (w < 490) {
+            g = (w - 440) / 50;
+            b = 1;
+        } else if (w < 510) {
+            g = 1;
+            b = (510 - w) / 20;
+        } else if (w < 580) {
+            r = (w - 510) / 70;
+            g = 1;
+        } else if (w < 645) {
+            r = 1;
+            g = (645 - w) / 65;
+        } else {
+            r = 1;
+        }
+
+        // Fade near the edges of the visible range
+        let k = 1;
+
+        if (w < 420) {
+            k = 0.4 + 0.6 * (w - 380) / 40;
+        } else if (w > 700) {
+            k = 0.4 + 0.6 * (780 - w) / 80;
+        }
+
+        return [r, g, b].map(function (c) {
+            return Math.round(255 * Math.pow(c * k, 0.8));
+        });
+    }
+
+
+    // ============================================================
+    // CALCULATE PHYSICS
+    // ============================================================
+
+    function getPhotocurrent(KE, emitting, V) {
+
+        const level = Number(intensity.value);
+
+        if (!emitting || KE <= 0 || level <= 0) {
+            return 0;
+        }
+
+        // Saturation current is proportional to intensity
+        const saturation = MAX_CURRENT * level / 100;
+
+        // Collector positive: every electron is collected
+        if (V >= 0) {
+            return saturation;
+        }
+
+        // Collector negative: only electrons with enough energy arrive
+        const retard = -V;
+        const slowest = MIN_ENERGY_FRACTION * KE;
+
+        if (retard <= slowest) {
+            return saturation;
+        }
+
+        if (retard >= KE) {
+            return 0;
+        }
+
+        return saturation * (KE - retard) / (KE - slowest);
+    }
+
+    function getPhysics() {
+
+        // Work function of selected metal
+        const phi = Number(metal.value);
+
+        // Frequency in Hz
+        const f = Number(frequency.value) * 1e14;
+
+        // Threshold frequency
+        const f0 = phi / PLANCK_CONSTANT;
+
+        // Photon energy
+        const photonEnergy = PLANCK_CONSTANT * f;
+
+        // Maximum kinetic energy
+        let KE = photonEnergy - phi;
+
+        // If frequency is below threshold,
+        // electrons cannot be emitted.
+        if (KE < 0) {
+            KE = 0;
+        }
+
+        // Stopping potential numerically equals KE in eV
+        const stoppingVoltage = KE;
+
+        // Voltage applied between emitter and collector
+        // (positive = collector positive = accelerating)
+        const V = Number(voltage.value);
+
+        const current = getPhotocurrent(KE, f >= f0, V);
+
+        return {
+            phi,
+            f,
+            f0,
+            photonEnergy,
+            KE,
+            stoppingVoltage,
+            V,
+            current
+        };
+    }
+
+
+    // ============================================================
+    // UPDATE DISPLAY
+    // ============================================================
+
+    function updatePhysicsDisplay() {
+
+        const physics = getPhysics();
+
+        frequencyValue.textContent =
+            Number(frequency.value).toFixed(1);
+
+        wavelengthValue.textContent =
+            Math.round(LIGHT_SPEED_NM / Number(frequency.value));
+
+        intensityValue.textContent =
+            intensity.value;
+
+        voltageValue.textContent =
+            formatSigned(physics.V, 1);
+
+        workFunction.textContent =
+            physics.phi.toFixed(2) + " eV";
+
+        thresholdFrequency.textContent =
+            (physics.f0 / 1e14).toFixed(2)
+            + " × 10¹⁴ Hz";
+
+        kineticEnergy.textContent =
+            physics.KE.toFixed(2) + " eV";
+
+        stoppingPotential.textContent =
+            physics.stoppingVoltage.toFixed(2) + " V";
+
+
+        if (Number(intensity.value) === 0) {
+
+            statusBox.textContent =
+                "Intensity is zero — no light is reaching the metal.";
+
+        } else if (physics.f < physics.f0) {
+
+            statusBox.textContent =
+                "Frequency is below threshold — no photoelectrons.";
+
+        } else if (physics.V <= -physics.stoppingVoltage) {
+
+            statusBox.textContent =
+                "The retarding voltage has reached the stopping potential — no current.";
+
+        } else {
+
+            statusBox.textContent =
+                "Photoelectrons are being emitted.";
+
+        }
+    }
+
+
+    // ============================================================
+    // CREATE PHOTON
+    // ============================================================
+
+    function createPhoton() {
+
+        // Photon enters from the left
+        const photon = {
+
+            x: 70,
+
+            // Random vertical position (across the plate)
+            y: VH * 0.12 + Math.random() * VH * 0.76,
+
+            // Photon speed
+            speed: 350,
+
+            // Size
+            radius: 4
+        };
+
+        photons.push(photon);
+    }
+
+
+    // ============================================================
+    // CREATE PHOTOELECTRON
+    // ============================================================
+
+    function createElectron(x, y) {
+
+        const physics = getPhysics();
+
+        // Maximum kinetic energy in eV
+        const KE = physics.KE;
+
+        if (KE <= 0) {
+            return;
+        }
+
+        // Each electron gets a share of the maximum energy
+        const energy =
+            KE * (MIN_ENERGY_FRACTION
+                  + (1 - MIN_ENERGY_FRACTION) * Math.random());
+
+
+        // --------------------------------------------------------
+        // Convert kinetic energy to real velocity
+        //
+        // KE = 1/2 mv²
+        //
+        // v = sqrt(2KE/m)
+        // --------------------------------------------------------
+
+        const energyJoules =
+            energy * EV_TO_JOULE;
+
+        const realVelocity =
+            Math.sqrt(
+                (2 * energyJoules) /
+                ELECTRON_MASS
+            );
+
+
+        // --------------------------------------------------------
+        // We cannot display real velocity directly.
+        // It would be far too fast for a screen.
+        //
+        // So we map physical velocity to visual velocity.
+        // --------------------------------------------------------
+
+        const visualSpeed =
+            120 + Math.min(
+                realVelocity / 100000,
+                500
+            );
+
+
+        // Electron travels mainly toward collector
+        // but with a small random angle.
+
+        const angle =
+            (-25 + Math.random() * 50)
+            * Math.PI / 180;
+
+
+        // --------------------------------------------------------
+        // Effect of the applied voltage.
+        //
+        // The electron's energy changes linearly across the gap,
+        // so v² changes linearly with distance. That gives a
+        // constant acceleration (positive voltage) or
+        // deceleration (negative voltage).
+        // --------------------------------------------------------
+
+        const gap = COLLECTOR_X - x;
+
+        let ax = 0;
+
+        if (physics.V !== 0) {
+
+            ax =
+                Math.sign(physics.V) *
+                visualSpeed * visualSpeed *
+                Math.abs(physics.V) /
+                (2 * energy * gap);
+        }
+
+
+        const electron = {
+
+            x: x,
+
+            y: y,
+
+            vx:
+                visualSpeed * Math.cos(angle),
+
+            vy:
+                visualSpeed * Math.sin(angle),
+
+            ax: ax,
+
+            radius: 5,
+
+            energy: energy
+
+        };
+
+
+        electrons.push(electron);
+    }
+
+
+    // ============================================================
+    // UPDATE PHOTONS
+    // ============================================================
+
+    function updatePhotons(deltaTime) {
+
+        for (let i = photons.length - 1; i >= 0; i--) {
+
+            const photon = photons[i];
+
+            // Move photon toward metal
+            photon.x += photon.speed * deltaTime;
+
+
+            // Photon has hit metal
+            if (photon.x >= METAL_X) {
+
+                const physics = getPhysics();
+
+                // Photon is absorbed
+                photons.splice(i, 1);
+
+
+                // Check photoelectric condition
+                if (physics.f >= physics.f0) {
+
+                    createElectron(
+                        METAL_X + 8,
+                        photon.y
+                    );
+
+                }
+            }
+        }
+    }
+
+
+    // ============================================================
+    // UPDATE ELECTRONS
+    // ============================================================
+
+    function updateElectrons(deltaTime) {
+
+        for (let i = electrons.length - 1; i >= 0; i--) {
+
+            const electron = electrons[i];
+
+
+            // Accelerate / decelerate in the field
+            electron.vx += electron.ax * deltaTime;
+
+            if (electron.vx > 520) {
+                electron.vx = 520;
+            }
+
+
+            // Move electron
+            electron.x +=
+                electron.vx * deltaTime;
+
+            electron.y +=
+                electron.vy * deltaTime;
+
+
+            // Remove electron if it reaches collector
+            if (electron.x >= COLLECTOR_X) {
+
+                electrons.splice(i, 1);
+
+                continue;
+            }
+
+
+            // Turned back by a retarding voltage
+            // and returned to the metal
+            if (
+                electron.vx < 0 &&
+                electron.x <= METAL_X + 8
+            ) {
+
+                electrons.splice(i, 1);
+
+                continue;
+            }
+
+
+            // Remove if it leaves simulation area
+            if (
+                electron.y < 0 ||
+                electron.y > VH
+            ) {
+
+                electrons.splice(i, 1);
+            }
+        }
+    }
+
+
+    // ============================================================
+    // ============================================================
+    //  INSIDE (ENLARGED) VIEW
+    // ============================================================
+    // ============================================================
+
+    function drawInsideWindow() {
+
+        const x = 34;
+        const top = 40;
+        const height = VH - 80;
+
+
+        // Light spilling in through the window
+
+        const glow =
+            ctx.createRadialGradient(
+                x, VH / 2, 10,
+                x, VH / 2, 280
+            );
+
+        glow.addColorStop(0, css(lightRGB, 0.30));
+        glow.addColorStop(1, css(lightRGB, 0));
+
+        ctx.fillStyle = glow;
+
+        ctx.fillRect(0, 0, 320, VH);
+
+
+        // Quartz window
+
+        ctx.fillStyle = "rgba(190,230,255,0.45)";
+
+        ctx.fillRect(x, top, 12, height);
+
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+
+        ctx.fillRect(x + 2, top, 2, height);
+
+
+        drawText(
+            "Quartz window",
+            x - 10,
+            VH - 25,
+            14,
+            "white",
+            "left"
+        );
+    }
+
+
+    function drawMetal() {
+
+        const x = METAL_X;
+
+        const top = 60;
+
+        const height = VH - 120;
+
+
+        // Metal plate
+
+        ctx.fillStyle =
+            METAL_COLORS[metal.selectedIndex] || "#b8bec7";
+
+        ctx.fillRect(
+            x,
+            top,
+            PLATE_WIDTH,
+            height
+        );
+
+
+        // Shine
+
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+
+        ctx.fillRect(
+            x + 4,
+            top,
+            4,
+            height
+        );
+
+
+        // Label
+
+        drawText(
+            "Metal Surface",
+            x + 9,
+            top - 20,
+            17,
+            "white"
+        );
+    }
+
+
+    function drawCollector() {
+
+        const x = COLLECTOR_X;
+
+        const top = 60;
+
+        const height = VH - 120;
+
+
+        ctx.fillStyle = "#59636e";
+
+        ctx.fillRect(
+            x,
+            top,
+            PLATE_WIDTH,
+            height
+        );
+
+
+        drawText(
+            "Collector",
+            x + 9,
+            top - 20,
+            17,
+            "white"
+        );
+    }
+
+
+    function drawChargeSigns() {
+
+        const V = Number(voltage.value);
+
+        if (V === 0) {
+            return;
+        }
+
+        const y = VH - 60 + 26;
+
+        const collectorSign = V > 0 ? "+" : "−";
+        const emitterSign = V > 0 ? "−" : "+";
+
+        const collectorColor = V > 0 ? "#ff8c7a" : "#7ab8ff";
+        const emitterColor = V > 0 ? "#7ab8ff" : "#ff8c7a";
+
+        drawText(
+            emitterSign,
+            METAL_X + 9,
+            y,
+            24,
+            emitterColor
+        );
+
+        drawText(
+            collectorSign,
+            COLLECTOR_X + 9,
+            y,
+            24,
+            collectorColor
+        );
+    }
+
+
+    function drawInsidePhotons() {
+
+        for (const photon of photons) {
+
+            // Photon trail
+
+            ctx.strokeStyle = css(lightRGB, 0.45);
+
+            ctx.lineWidth = 2;
+
+            drawLine(
+                photon.x - 20,
+                photon.y,
+                photon.x,
+                photon.y
+            );
+
+
+            // Photon
+
+            ctx.fillStyle = css(mixWithWhite(lightRGB, 0.35));
+
+            ctx.beginPath();
+
+            ctx.arc(
+                photon.x,
+                photon.y,
+                photon.radius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+        }
+    }
+
+
+    function drawInsideElectrons() {
+
+        for (const electron of electrons) {
+
+            // Glow
+
+            const gradient =
+                ctx.createRadialGradient(
+                    electron.x,
+                    electron.y,
+                    1,
+                    electron.x,
+                    electron.y,
+                    15
+                );
+
+            gradient.addColorStop(
+                0,
+                "rgba(100,200,255,1)"
+            );
+
+            gradient.addColorStop(
+                1,
+                "rgba(100,200,255,0)"
+            );
+
+            ctx.fillStyle = gradient;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                electron.x,
+                electron.y,
+                15,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            // Electron
+
+            ctx.fillStyle = "#55c7ff";
+
+            ctx.beginPath();
+
+            ctx.arc(
+                electron.x,
+                electron.y,
+                electron.radius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            // Electron trail
+
+            ctx.strokeStyle =
+                "rgba(85,199,255,0.35)";
+
+            ctx.lineWidth = 2;
+
+            drawLine(
+                electron.x - electron.vx * 0.05,
+                electron.y - electron.vy * 0.05,
+                electron.x,
+                electron.y
+            );
+        }
+    }
+
+
+    function drawInsideLabels() {
+
+        drawText(
+            "Photons",
+            VW * 0.28,
+            VH - 25,
+            14,
+            "white"
+        );
+
+        drawText(
+            "Photoelectrons",
+            VW * 0.66,
+            VH - 25,
+            14,
+            "white"
+        );
+
+        drawText(
+            "Inside the tube (enlarged)",
+            24,
+            30,
+            14,
+            "rgba(160,200,240,0.85)",
+            "left"
+        );
+    }
+
+
+    function drawInside() {
+
+        // Panel
+
+        ctx.fillStyle = "rgba(3, 6, 12, 0.84)";
+
+        ctx.fillRect(0, 0, VW, VH);
+
+
+        // Glass walls of the tube (top and bottom)
+
+        ctx.strokeStyle = "rgba(170,215,255,0.28)";
+
+        ctx.lineWidth = 6;
+
+        drawLine(0, 14, VW, 14);
+
+        drawLine(0, VH - 14, VW, VH - 14);
+
+
+        drawInsideWindow();
+
+        drawMetal();
+
+        drawCollector();
+
+        drawChargeSigns();
+
+        drawInsidePhotons();
+
+        drawInsideElectrons();
+
+        drawInsideLabels();
+
+
+        // Frame
+
+        ctx.strokeStyle = "rgba(120,170,220,0.55)";
+
+        ctx.lineWidth = 2;
+
+        ctx.strokeRect(1, 1, VW - 2, VH - 2);
+    }
+
+
+    // ============================================================
+    // ============================================================
+    //  EXPERIMENT (APPARATUS) VIEW
+    // ============================================================
+    // ============================================================
+
+    // --- Mapping particles into the apparatus -----------------------
+
+    function photonToApparatus(photon) {
+
+        // 0 at the lamp, 1 at the metal plate
+        const t = (photon.x - 70) / (METAL_X - 70);
+
+        const x = LENS_X + t * (EMITTER_X - LENS_X);
+
+        const targetY =
+            APP_PLATE_TOP +
+            (photon.y / VH) * (APP_PLATE_BOTTOM - APP_PLATE_TOP);
+
+        // The beam widens from the lens until it fills the plate
+        const spread =
+            x < BEAM_FLARE_X
+                ? 0.31 + 0.69 * (x - LENS_X) / (BEAM_FLARE_X - LENS_X)
+                : 1;
+
+        return {
+            x: x,
+            y: TUBE_CENTER_Y + (targetY - TUBE_CENTER_Y) * spread
+        };
+    }
+
+    function electronToApparatus(electron) {
+
+        const t = (electron.x - METAL_X) / (COLLECTOR_X - METAL_X);
+
+        return {
+            x: (EMITTER_X + 5) + t * ((COLLECTOR_PLATE_X - 5) - (EMITTER_X + 5)),
+            y: APP_PLATE_TOP +
+               clamp(electron.y / VH, 0, 1) *
+               (APP_PLATE_BOTTOM - APP_PLATE_TOP)
+        };
+    }
+
+
+    // --- Lamp ------------------------------------------------------
+
+    function drawLamp() {
+
+        const level = Number(intensity.value) / 100;
+
+        const bulbX = 126;
+
+
+        // Housing
+
+        roundedRectPath(28, 122, 84, 66, 10);
+
+        ctx.fillStyle = "#2a3647";
+        ctx.fill();
+
+        ctx.strokeStyle = "#4a5d75";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+
+        // Cooling slots
+
+        ctx.strokeStyle = "#3d4d62";
+        ctx.lineWidth = 3;
+
+        for (let i = 0; i < 4; i++) {
+            drawLine(42 + i * 14, 134, 42 + i * 14, 176);
+        }
+
+
+        // Reflector
+
+        ctx.fillStyle = "#3b4d64";
+
+        ctx.beginPath();
+        ctx.moveTo(112, 112);
+        ctx.lineTo(LENS_X, 136);
+        ctx.lineTo(LENS_X, 174);
+        ctx.lineTo(112, 198);
+        ctx.closePath();
+        ctx.fill();
+
+
+        // Glow
+
+        const glow =
+            ctx.createRadialGradient(
+                bulbX, TUBE_CENTER_Y, 3,
+                bulbX, TUBE_CENTER_Y, 62
+            );
+
+        glow.addColorStop(0, css(lightRGB, 0.15 + 0.6 * level));
+        glow.addColorStop(1, css(lightRGB, 0));
+
+        ctx.fillStyle = glow;
+
+        ctx.beginPath();
+        ctx.arc(bulbX, TUBE_CENTER_Y, 62, 0, Math.PI * 2);
+        ctx.fill();
+
+
+        // Bulb
+
+        ctx.fillStyle =
+            level > 0
+                ? css(mixWithWhite(lightRGB, 0.45))
+                : "#5a6572";
+
+        ctx.beginPath();
+        ctx.arc(bulbX, TUBE_CENTER_Y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+
+        // Lens
+
+        ctx.strokeStyle = css(lightRGB, 0.4 + 0.6 * level);
+        ctx.lineWidth = 3;
+
+        drawLine(LENS_X, 138, LENS_X, 172);
+
+
+        drawText("Light source", 70, 214, 14);
+    }
+
+
+    // --- Light beam ------------------------------------------------
+
+    function drawBeam() {
+
+        const level = Number(intensity.value) / 100;
+
+        if (level <= 0) {
+            return;
+        }
+
+        const gradient =
+            ctx.createLinearGradient(LENS_X, 0, EMITTER_X, 0);
+
+        gradient.addColorStop(0, css(lightRGB, 0.10 + 0.40 * level));
+        gradient.addColorStop(1, css(lightRGB, 0.05 + 0.22 * level));
+
+        ctx.fillStyle = gradient;
+
+        ctx.beginPath();
+        ctx.moveTo(LENS_X, 138);
+        ctx.lineTo(BEAM_FLARE_X, APP_PLATE_TOP);
+        ctx.lineTo(EMITTER_X - APP_PLATE_WIDTH / 2, APP_PLATE_TOP);
+        ctx.lineTo(EMITTER_X - APP_PLATE_WIDTH / 2, APP_PLATE_BOTTOM);
+        ctx.lineTo(BEAM_FLARE_X, APP_PLATE_BOTTOM);
+        ctx.lineTo(LENS_X, 172);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+
+    // --- Glass tube ------------------------------------------------
+
+    function tubePath() {
+
+        const r = (TUBE.bottom - TUBE.top) / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(TUBE.left + r, TUBE.top);
+        ctx.lineTo(TUBE.right - r, TUBE.top);
+        ctx.arc(TUBE.right - r, TUBE.top + r, r, -Math.PI / 2, Math.PI / 2);
+        ctx.lineTo(TUBE.left + r, TUBE.bottom);
+        ctx.arc(TUBE.left + r, TUBE.top + r, r, Math.PI / 2, Math.PI * 1.5);
+        ctx.closePath();
+    }
+
+    function drawTubeBody() {
+
+        const gradient =
+            ctx.createLinearGradient(0, TUBE.top, 0, TUBE.bottom);
+
+        gradient.addColorStop(0, "rgba(170,215,255,0.22)");
+        gradient.addColorStop(1, "rgba(120,170,220,0.07)");
+
+        tubePath();
+
+        ctx.fillStyle = gradient;
+        ctx.fill();
+    }
+
+    function drawTubeGlass() {
+
+        const r = (TUBE.bottom - TUBE.top) / 2;
+
+
+        // Outline
+
+        tubePath();
+
+        ctx.strokeStyle = "rgba(190,225,255,0.6)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+
+        // Highlight along the top
+
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+
+        drawLine(
+            TUBE.left + r + 20,
+            TUBE.top + 11,
+            TUBE.right - r - 20,
+            TUBE.top + 11
+        );
+
+        ctx.lineCap = "butt";
+
+
+        // Quartz window (left end of the tube)
+
+        ctx.strokeStyle = "rgba(215,242,255,0.95)";
+        ctx.lineWidth = 6;
+
+        ctx.beginPath();
+        ctx.arc(
+            TUBE.left + r,
+            TUBE.top + r,
+            r,
+            Math.PI * 0.75,
+            Math.PI * 1.25
+        );
+        ctx.stroke();
+    }
+
+
+    // --- Plates and wires ------------------------------------------
+
+    function drawApparatusPlates() {
+
+        const height = APP_PLATE_BOTTOM - APP_PLATE_TOP;
+
+
+        // Emitter (metal plate)
+
+        ctx.fillStyle =
+            METAL_COLORS[metal.selectedIndex] || "#b8bec7";
+
+        ctx.fillRect(
+            EMITTER_X - APP_PLATE_WIDTH / 2,
+            APP_PLATE_TOP,
+            APP_PLATE_WIDTH,
+            height
+        );
+
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+
+        ctx.fillRect(
+            EMITTER_X - 2,
+            APP_PLATE_TOP,
+            2,
+            height
+        );
+
+
+        // Collector
+
+        ctx.fillStyle = "#59636e";
+
+        ctx.fillRect(
+            COLLECTOR_PLATE_X - APP_PLATE_WIDTH / 2,
+            APP_PLATE_TOP,
+            APP_PLATE_WIDTH,
+            height
+        );
+    }
+
+    function drawWires() {
+
+        ctx.strokeStyle = WIRE_COLOR;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = "round";
+
+        // Leads from the plates, out through the glass
+        drawLine(EMITTER_X, APP_PLATE_BOTTOM, EMITTER_X, WIRE_TOP);
+        drawLine(COLLECTOR_PLATE_X, APP_PLATE_BOTTOM, COLLECTOR_PLATE_X, WIRE_TOP);
+
+        // Circuit loop
+        ctx.beginPath();
+        ctx.moveTo(EMITTER_X, WIRE_TOP);
+        ctx.lineTo(WIRE_LEFT, WIRE_TOP);
+        ctx.lineTo(WIRE_LEFT, WIRE_BOTTOM);
+        ctx.lineTo(WIRE_RIGHT, WIRE_BOTTOM);
+        ctx.lineTo(WIRE_RIGHT, WIRE_TOP);
+        ctx.lineTo(COLLECTOR_PLATE_X, WIRE_TOP);
+        ctx.stroke();
+
+        // Voltmeter branch (in parallel with the tube)
+        drawLine(EMITTER_X, WIRE_TOP, COLLECTOR_PLATE_X, WIRE_TOP);
+
+
+        // Glass seals where the leads leave the tube
+
+        ctx.fillStyle = "#24364d";
+
+        ctx.fillRect(EMITTER_X - 6, TUBE.bottom - 7, 12, 11);
+        ctx.fillRect(COLLECTOR_PLATE_X - 6, TUBE.bottom - 7, 12, 11);
+
+
+        // Junctions
+
+        ctx.fillStyle = WIRE_COLOR;
+
+        for (const x of [EMITTER_X, COLLECTOR_PLATE_X]) {
+
+            ctx.beginPath();
+            ctx.arc(x, WIRE_TOP, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+
+    // --- Moving dots in the wires (electron flow) -------------------
+
+    const FLOW_PATH = [
+        [COLLECTOR_PLATE_X, APP_PLATE_BOTTOM],
+        [COLLECTOR_PLATE_X, WIRE_TOP],
+        [WIRE_RIGHT, WIRE_TOP],
+        [WIRE_RIGHT, WIRE_BOTTOM],
+        [WIRE_LEFT, WIRE_BOTTOM],
+        [WIRE_LEFT, WIRE_TOP],
+        [EMITTER_X, WIRE_TOP],
+        [EMITTER_X, APP_PLATE_BOTTOM]
+    ];
+
+    const FLOW_SPACING = 26;
+
+    const FLOW_LENGTHS = [];
+
+    let FLOW_TOTAL = 0;
+
+    for (let i = 0; i < FLOW_PATH.length - 1; i++) {
+
+        const dx = FLOW_PATH[i + 1][0] - FLOW_PATH[i][0];
+        const dy = FLOW_PATH[i + 1][1] - FLOW_PATH[i][1];
+
+        const length = Math.hypot(dx, dy);
+
+        FLOW_LENGTHS.push(length);
+
+        FLOW_TOTAL += length;
+    }
+
+    function pointOnFlowPath(distance) {
+
+        let d = distance;
+
+        for (let i = 0; i < FLOW_LENGTHS.length; i++) {
+
+            if (d <= FLOW_LENGTHS[i]) {
+
+                const t = d / FLOW_LENGTHS[i];
+
+                return [
+                    FLOW_PATH[i][0] +
+                        (FLOW_PATH[i + 1][0] - FLOW_PATH[i][0]) * t,
+                    FLOW_PATH[i][1] +
+                        (FLOW_PATH[i + 1][1] - FLOW_PATH[i][1]) * t
+                ];
+            }
+
+            d -= FLOW_LENGTHS[i];
+        }
+
+        return FLOW_PATH[FLOW_PATH.length - 1];
+    }
+
+    function drawWireFlow() {
+
+        if (meterCurrent < 0.05) {
+            return;
+        }
+
+        ctx.fillStyle = "rgba(100,205,255,0.95)";
+
+        const count = Math.floor(FLOW_TOTAL / FLOW_SPACING);
+
+        for (let k = 0; k < count; k++) {
+
+            const distance =
+                (flowPosition + k * FLOW_SPACING) % FLOW_TOTAL;
+
+            const p = pointOnFlowPath(distance);
+
+            ctx.beginPath();
+            ctx.arc(p[0], p[1], 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+
+    // --- Meters ----------------------------------------------------
+
+    function drawMeter(cx, cy, letter, letterColor, name, value, min, max, valueText) {
+
+        const r = METER_RADIUS;
+
+        const pivotY = cy + 10;
+
+
+        // Bezel
+
+        ctx.fillStyle = "#1b2635";
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#6a7f99";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+
+        // Face
+
+        ctx.fillStyle = "#eef1f5";
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 4, 0, Math.PI * 2);
+        ctx.fill();
+
+
+        // Scale ticks
+
+        ctx.strokeStyle = "#3a4656";
+        ctx.lineWidth = 1.5;
+
+        for (let i = 0; i <= 4; i++) {
+
+            const a = (-55 + 110 * i / 4) * Math.PI / 180;
+
+            const sx = Math.sin(a);
+            const sy = -Math.cos(a);
+
+            drawLine(
+                cx + sx * 26,
+                pivotY + sy * 26,
+                cx + sx * 32,
+                pivotY + sy * 32
+            );
+        }
+
+
+        // Needle
+
+        const t = clamp((value - min) / (max - min), 0, 1);
+
+        const angle = (-55 + 110 * t) * Math.PI / 180;
+
+        ctx.strokeStyle = "#c0392b";
+        ctx.lineWidth = 2;
+
+        drawLine(
+            cx,
+            pivotY,
+            cx + Math.sin(angle) * 30,
+            pivotY - Math.cos(angle) * 30
+        );
+
+        ctx.fillStyle = "#333";
+
+        ctx.beginPath();
+        ctx.arc(cx, pivotY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+
+        // Letter
+
+        drawText(letter, cx, cy + 28, 15, letterColor, "center", "Arial");
+
+
+        // Readout box
+
+        const boxX = cx - 38;
+        const boxY = cy + r + 6;
+
+        roundedRectPath(boxX, boxY, 76, 34, 6);
+
+        ctx.fillStyle = "#0d1620";
+        ctx.fill();
+
+        ctx.strokeStyle = "#31465e";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        drawText(name, cx, boxY + 13, 10, "#8fa6bf");
+
+        drawText(
+            valueText,
+            cx,
+            boxY + 28,
+            13,
+            "#7dffb0",
+            "center",
+            "'Courier New', monospace"
+        );
+    }
+
+    function drawSupply(V) {
+
+        const cx = SUPPLY.x;
+        const cy = SUPPLY.y;
+
+
+        // Hide the plain wire behind the symbol
+
+        ctx.fillStyle = "#07111f";
+
+        ctx.fillRect(cx - 28, cy - 18, 56, 36);
+
+
+        ctx.strokeStyle = WIRE_COLOR;
+        ctx.lineWidth = 3;
+
+        drawLine(cx - 28, cy, cx - 12, cy);
+        drawLine(cx + 12, cy, cx + 28, cy);
+
+
+        // Long line = positive side, short thick line = negative side.
+        // The collector is on the right, so a positive voltage puts
+        // the long line on the right.
+
+        const longX = V >= 0 ? cx + 12 : cx - 12;
+        const shortX = V >= 0 ? cx - 12 : cx + 12;
+
+        ctx.strokeStyle = "#e8edf3";
+        ctx.lineWidth = 3;
+
+        drawLine(longX, cy - 14, longX, cy + 14);
+
+        ctx.lineWidth = 6;
+
+        drawLine(shortX, cy - 7, shortX, cy + 7);
+
+
+        if (V !== 0) {
+
+            drawText("+", longX, cy - 22, 14, "#ff8c7a");
+            drawText("−", shortX, cy - 22, 14, "#7ab8ff");
+        }
+
+
+        drawText("Variable DC supply", cx, cy + 34, 12, "rgba(255,255,255,0.8)");
+    }
+
+    function drawCircuit(physics) {
+
+        // Dots first, so the meters sit on top of them
+        drawWireFlow();
+
+        drawSupply(physics.V);
+
+        drawMeter(
+            VOLTMETER.x,
+            VOLTMETER.y,
+            "V",
+            "#1f4e8c",
+            "Voltmeter",
+            physics.V,
+            -5,
+            5,
+            formatSigned(physics.V, 2) + " V"
+        );
+
+        drawMeter(
+            AMMETER.x,
+            AMMETER.y,
+            "A",
+            "#a33a2a",
+            "Ammeter",
+            meterCurrent,
+            0,
+            MAX_CURRENT,
+            meterCurrent.toFixed(1) + " µA"
+        );
+    }
+
+
+    // --- Particles seen from outside --------------------------------
+
+    function drawApparatusParticles() {
+
+        // Photons
+
+        for (const photon of photons) {
+
+            const p = photonToApparatus(photon);
+
+            ctx.strokeStyle = css(lightRGB, 0.5);
+            ctx.lineWidth = 1.5;
+
+            drawLine(p.x - 14, p.y, p.x, p.y);
+
+            ctx.fillStyle = css(mixWithWhite(lightRGB, 0.35));
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+
+        // Electrons
+
+        for (const electron of electrons) {
+
+            const p = electronToApparatus(electron);
+
+            const glow =
+                ctx.createRadialGradient(p.x, p.y, 0.5, p.x, p.y, 8);
+
+            glow.addColorStop(0, "rgba(100,200,255,0.9)");
+            glow.addColorStop(1, "rgba(100,200,255,0)");
+
+            ctx.fillStyle = glow;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#55c7ff";
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+
+    // --- Labels and zoom hint ----------------------------------------
+
+    function drawApparatusLabels() {
+
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 1;
+
+        // Emitter
+        drawText("Emitter (metal plate)", EMITTER_X, 56, 14);
+        drawLine(EMITTER_X, 62, EMITTER_X, APP_PLATE_TOP - 3);
+
+        // Collector
+        drawText("Collector", COLLECTOR_PLATE_X, 56, 14);
+        drawLine(COLLECTOR_PLATE_X, 62, COLLECTOR_PLATE_X, APP_PLATE_TOP - 3);
+
+        // Quartz window
+        drawText("Quartz window", 335, 262, 14);
+        drawLine(335, 227, 335, 246);
+
+        // Tube
+        drawText("Evacuated tube", 775, 262, 14);
+
+
+        // Legend for the dots
+
+        ctx.fillStyle = "rgba(100,205,255,0.95)";
+
+        ctx.beginPath();
+        ctx.arc(36, 490, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        drawText(
+            "Electron flow in the wires",
+            46,
+            494,
+            12,
+            "rgba(255,255,255,0.7)",
+            "left"
+        );
+    }
+
+    function drawZoomHint() {
+
+        const x = 442;
+        const y = 90;
+        const w = 296;
+        const h = 132;
+
+        ctx.save();
+
+        ctx.setLineDash([6, 5]);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 1.5;
+
+        roundedRectPath(x, y, w, h, 10);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+
+
+        // Small magnifier icon
+
+        const mx = x + w - 20;
+        const my = y + 18;
+
+        ctx.strokeStyle = "rgba(255,255,255,0.75)";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.arc(mx, my, 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        drawLine(mx + 4.5, my + 4.5, mx + 10, my + 10);
+
+        ctx.restore();
+    }
+
+
+    function drawApparatus() {
+
+        const physics = getPhysics();
+
+        drawTubeBody();
+
+        drawBeam();
+
+        drawLamp();
+
+        drawApparatusPlates();
+
+        drawApparatusParticles();
+
+        drawTubeGlass();
+
+        drawWires();
+
+        drawCircuit(physics);
+
+        drawApparatusLabels();
+
+        drawZoomHint();
+    }
+
+
+    // ============================================================
+    // MAIN DRAW FUNCTION
+    // ============================================================
+
+    function draw() {
+
+        ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+
+        ctx.clearRect(0, 0, VW, VH);
+
+        ctx.fillStyle = "rgba(3, 6, 12, 0.84)";
+
+        ctx.fillRect(0, 0, VW, VH);
+
+
+        const blend = easeInOut(viewBlend);
+
+
+        // Experiment setup (zooms in toward the plates as it fades)
+
+        if (blend < 1) {
+
+            ctx.save();
+
+            ctx.globalAlpha = 1 - blend;
+
+            const zoom = 1 + blend * 1.6;
+
+            ctx.translate(VOLTMETER.x, TUBE_CENTER_Y);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-VOLTMETER.x, -TUBE_CENTER_Y);
+
+            drawApparatus();
+
+            ctx.restore();
+        }
+
+
+        // Inside view (grows into place as it fades in)
+
+        if (blend > 0) {
+
+            ctx.save();
+
+            ctx.globalAlpha = blend;
+
+            const grow = 0.55 + 0.45 * blend;
+
+            ctx.translate(VW / 2, VH / 2);
+            ctx.scale(grow, grow);
+            ctx.translate(-VW / 2, -VH / 2);
+
+            drawInside();
+
+            ctx.restore();
+        }
+    }
+
+
+    // ============================================================
+    // MAIN ANIMATION LOOP
+    // ============================================================
+
+    function animate(currentTime) {
+
+        // Time between frames
+        const deltaTime =
+            (currentTime - lastTime) / 1000;
+
+        lastTime = currentTime;
+
+
+        // Prevent very large time steps
+        const dt =
+            Math.min(deltaTime, 0.05);
+
+
+        // --------------------------------------------------------
+        // LIGHT COLOUR
+        // --------------------------------------------------------
+
+        lightRGB = getLightColor();
+
+
+        // --------------------------------------------------------
+        // CREATE PHOTONS
+        // --------------------------------------------------------
+
+        const intensityValueNumber =
+            Number(intensity.value);
+
+
+        /*
+            Intensity controls the number of photons.
+
+            Higher intensity
+            → more photons per second
+            → more photoelectrons
+        */
+
+        photonTimer += dt;
+
+        const photonsPerSecond =
+            intensityValueNumber * 0.35;
+
+
+        if (
+            photonTimer >
+            1 / Math.max(photonsPerSecond, 1)
+        ) {
+
+            if (intensityValueNumber > 0) {
+
+                createPhoton();
+            }
+
+            photonTimer = 0;
+        }
+
+
+        // --------------------------------------------------------
+        // UPDATE PARTICLES
+        // --------------------------------------------------------
+
+        updatePhotons(dt);
+
+        updateElectrons(dt);
+
+
+        // --------------------------------------------------------
+        // UPDATE METERS AND WIRE FLOW
+        // --------------------------------------------------------
+
+        const physics = getPhysics();
+
+        meterCurrent +=
+            (physics.current - meterCurrent) * Math.min(1, dt * 8);
+
+        flowPosition =
+            (flowPosition + (15 + meterCurrent * 7) * dt) % FLOW_TOTAL;
+
+
+        // --------------------------------------------------------
+        // VIEW TRANSITION
+        // --------------------------------------------------------
+
+        const target = showInside ? 1 : 0;
+
+        if (viewBlend < target) {
+
+            viewBlend = Math.min(target, viewBlend + dt * 2.5);
+
+        } else if (viewBlend > target) {
+
+            viewBlend = Math.max(target, viewBlend - dt * 2.5);
+        }
+
+
+        // --------------------------------------------------------
+        // DRAW EVERYTHING
+        // --------------------------------------------------------
+
+        draw();
+
+
+        // Continue animation
+        requestAnimationFrame(animate);
+    }
+
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+
+    metal.addEventListener(
+        "change",
+        updatePhysicsDisplay
+    );
+
+    frequency.addEventListener(
+        "input",
+        updatePhysicsDisplay
+    );
+
+    intensity.addEventListener(
+        "input",
+        updatePhysicsDisplay
+    );
+
+    voltage.addEventListener(
+        "input",
+        updatePhysicsDisplay
+    );
+
+    zoomButton.addEventListener("click", function () {
+
+        showInside = !showInside;
+
+        zoomButton.textContent =
+            showInside
+                ? "Back to the experiment"
+                : "Show inside the tube";
+
+        zoomButton.setAttribute(
+            "aria-pressed",
+            showInside ? "true" : "false"
+        );
+
+        viewCaption.textContent =
+            showInside
+                ? "Enlarged view: what happens inside the tube"
+                : "Experiment setup";
+    });
+
+
+    // ============================================================
+    // INITIAL SETUP
+    // ============================================================
+
+    updatePhysicsDisplay();
+
+    requestAnimationFrame(animate);
+
+</script>
+
+<script>
+document.getElementById("paths").innerHTML = Array.from({ length: 22 }, function (_, i) {
+    var r = function () { return Math.round(Math.random() * 1000); };
+    return '<path pathLength="1" style="animation-delay:' + (-i * 0.9) + 's" d="M-50 ' + r() + 'C' + r() + ' ' + r() + ' ' + r() + ' ' + r() + ' 1050 ' + r() + '"/>';
+}).join("");
+</script>
+<script>
+/* Graphs: read the friend's own getPhysics() and getPhotocurrent(), no new physics. */
+(function () {
+    var L = 46, R = 14, T = 26, B = 54, FG = "#e8eef8", MU = "#9aa6b8";
+    var cvK = document.getElementById("graphK"), cvI = document.getElementById("graphI");
+
+    function plot(cv, o) {
+        var d = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+        cv.width = w * d; cv.height = h * d;
+        var c = cv.getContext("2d");
+        c.setTransform(d, 0, 0, d, 0, 0);
+        var X = function (v) { return L + (v - o.x0) / (o.x1 - o.x0) * (w - L - R); };
+        var Y = function (v) { return h - B - (v - o.y0) / (o.y1 - o.y0) * (h - T - B); };
+
+        c.font = '12px "IBM Plex Mono", monospace';
+        c.lineWidth = 1;
+        c.strokeStyle = "rgba(255,255,255,.08)";
+        c.fillStyle = MU;
+        o.yt.forEach(function (v) {
+            c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(w - R, Y(v)); c.stroke();
+            c.textAlign = "right"; c.textBaseline = "middle"; c.fillText(v, L - 8, Y(v));
+        });
+        o.xt.forEach(function (v) {
+            c.beginPath(); c.moveTo(X(v), T); c.lineTo(X(v), h - B); c.stroke();
+            c.textAlign = "center"; c.textBaseline = "top"; c.fillText(v, X(v), h - B + 8);
+        });
+        c.strokeStyle = "rgba(255,255,255,.35)";
+        c.beginPath(); c.moveTo(L, T); c.lineTo(L, h - B); c.lineTo(w - R, h - B); c.stroke();
+
+        c.textAlign = "left"; c.textBaseline = "top"; c.fillStyle = FG;
+        c.fillText(o.yl, L, 2);
+        c.textAlign = "center"; c.fillStyle = MU;
+        c.fillText(o.xl, (L + w - R) / 2, h - B + 28);
+
+        (o.vl || []).forEach(function (m) {
+            c.save(); c.setLineDash([4, 4]); c.strokeStyle = m.c;
+            c.beginPath(); c.moveTo(X(m.x), T); c.lineTo(X(m.x), h - B); c.stroke();
+            c.restore();
+            c.fillStyle = m.c; c.textAlign = "center"; c.textBaseline = "bottom";
+            c.fillText(m.t, X(m.x), T - 4);
+        });
+
+        if (o.pts.length) {
+            c.save(); c.strokeStyle = o.c; c.lineWidth = 2.5; c.shadowColor = o.c; c.shadowBlur = 12;
+            c.beginPath();
+            o.pts.forEach(function (p, i) { i ? c.lineTo(X(p[0]), Y(p[1])) : c.moveTo(X(p[0]), Y(p[1])); });
+            c.stroke(); c.restore();
+        }
+        if (o.dot) {
+            c.fillStyle = "#ffffff";
+            c.beginPath(); c.arc(X(o.dot[0]), Y(o.dot[1]), 5, 0, Math.PI * 2); c.fill();
+        }
+    }
+
+    function drawK() {
+        var p = getPhysics(), phi = Number(metal.value), hh = PLANCK_CONSTANT * 1e14;
+        var top = Math.max(1, Math.ceil(hh * 12 - phi)), pts = [];
+        for (var f = 3; f <= 12.001; f += 0.1) pts.push([f, Math.max(0, hh * f - phi)]);
+        var yt = []; for (var i = 0; i <= top; i++) yt.push(i);
+        plot(cvK, {
+            x0: 3, x1: 12, y0: 0, y1: top, xt: [3, 5, 7, 9, 11], yt: yt,
+            xl: "Frequency (×10¹⁴ Hz)", yl: "Max KE (eV)", pts: pts, c: "#6ee7ff",
+            vl: [{ x: phi / hh, c: "#ffb547", t: "threshold" }],
+            dot: [Number(frequency.value), p.KE]
+        });
+    }
+
+    function drawI() {
+        var p = getPhysics(), pts = [];
+        for (var V = -5; V <= 5.001; V += 0.1) pts.push([V, getPhotocurrent(p.KE, p.f >= p.f0, V)]);
+        plot(cvI, {
+            x0: -5, x1: 5, y0: 0, y1: MAX_CURRENT, xt: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+            yt: [0, 5, 10, 15, 20], xl: "Collector voltage (V)", yl: "Photocurrent (µA)",
+            pts: pts, c: "#6ee7ff",
+            vl: p.KE > 0 ? [{ x: -p.KE, c: "#ffb547", t: "V₀" }] : [],
+            dot: [p.V, p.current]
+        });
+    }
+
+    function redraw() { drawK(); drawI(); }
+    ["frequency", "intensity", "voltage", "metal"].forEach(function (id) {
+        var el = document.getElementById(id);
+        el.addEventListener("input", redraw);
+        el.addEventListener("change", redraw);
+    });
+    window.addEventListener("resize", redraw);
+    redraw();
+})();
+</script>
+</body>
+</html>
